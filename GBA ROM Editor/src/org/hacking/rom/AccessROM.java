@@ -6,7 +6,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel.MapMode;
-
+import static org.hacking.rom.AccessROMDataType.*;
 /**
  * The main ROM controller. This class is responsible for reading and writing data in the GBA 
  * ROM.
@@ -35,6 +35,36 @@ public class AccessROM {
 	public AccessROM(File romFile) throws IOException {
 		this.accessedROM = new RandomAccessFile(romFile, "rw");
 		this.romBuffer = accessedROM.getChannel().map(MapMode.READ_WRITE, 0, accessedROM.length());
+		AccessROM.currentROM = this;
+	}
+	
+	/**
+	 * Reads a pointer in little endian format from the ROM. 
+	 * Since the value at the address is 0x8000000 greater than the actual pointer's address 
+	 * (I assume due to GBA RAM), this method must be used for reading pointers. 
+	 * Do not use this method for reading standard GBA Integers.
+	 * 
+	 * @return
+	 * 		A correct file pointer in little endian format
+	 */
+	public int getPointer() {
+		return getPointer(getPosition());
+	}
+	
+	/**
+	 * Reads a pointer in little endian format from the ROM at a specific address. 
+	 * Since the value at the address is 0x8000000 greater than the actual pointer's address 
+	 * (I assume due to GBA RAM), this method must be used for reading pointers. 
+	 * Do not use this method for reading standard GBA Integers.
+	 * 
+	 * @param cursor
+	 * @return
+	 */
+	public int getPointer(int cursor) {
+		if(cursor >= 0x8000000)
+			cursor -= 0x8000000;
+		
+		return (int) get(INTEGER);
 	}
 	
 	/**
@@ -83,11 +113,22 @@ public class AccessROM {
 		return romBuffer.position();
 	}
 	
+	/**
+	 * Skip a number of bytes in the rom buffer.
+	 * 
+	 * @param offset
+	 * 		The amount to offset, cannot be negative
+	 */
+	public void skip(int offset) {
+		if(offset < 0)
+			offset = 0;
+		romBuffer.position(getPosition() + offset);
+	}
+	
 	// These two should be kept at the bottom of this class and out of the way :)
 	
 	/**
-	 * The current ROM in which we load all data from, this is set from a file loading GUI, which is 
-	 * still TODO
+	 * The current ROM in which we load all data from.
 	 */
 	private static AccessROM currentROM;
 	
